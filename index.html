@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
         body {
@@ -32,29 +34,66 @@
             width: 100%;
             max-width: 800px;
             margin: 0 auto;
-            /* 하단 여백을 늘려서 마지막 폴라로이드 아래 공간 확보 */
-            padding: 40px 20px 60px 20px; 
+            padding: 60px 20px 60px 20px; 
             display: flex;
             flex-direction: column;
             align-items: center; 
             position: relative;
         }
 
-        .month-label { font-size: clamp(10px, 2.8vw, 18px); }
-        .photo-text { font-size: clamp(7px, 1.8vw, 10px); }
+        /* 테이프 정렬 방식 대폭 수정 (중앙 정렬 보정) */
         .tape { 
             width: clamp(35px, 9vw, 65px); 
             height: clamp(12px, 3vw, 24px); 
             opacity: 1 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 900;
+            font-size: clamp(8px, 2vw, 12px);
+            line-height: 0; /* 텍스트 베이스라인 영향 제거 */
+            padding: 0;
+            margin: 0;
+            text-align: center;
+        }
+
+        #crop-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(0,0,0,0.9);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .crop-container {
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1/1;
+            background: #111;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
+    <div id="crop-modal">
+        <div class="crop-container">
+            <img id="crop-target" src="">
+        </div>
+        <div class="flex gap-4">
+            <button onclick="closeModal()" class="px-8 py-3 bg-zinc-700 text-white rounded-full font-bold">취소</button>
+            <button onclick="applyCrop()" class="px-8 py-3 bg-[#d63031] text-white rounded-full font-bold">적용하기</button>
+        </div>
+    </div>
+
     <div id="capture-area">
         <div id="background-decor" class="absolute inset-0 pointer-events-none overflow-hidden z-0"></div>
 
         <div class="relative z-10 w-full flex flex-col items-center">
-            <header class="flex flex-col items-center text-center mb-8 pt-8 w-full">
+            <header class="flex flex-col items-center text-center mb-8 w-full">
                 <h1 class="text-4xl md:text-7xl font-extrabold tracking-tighter leading-tight italic flex flex-col items-center justify-center gap-1 uppercase">
                     <span class="text-white">2025</span>
                     <span class="text-[#d63031]">HQ YEAR END</span>
@@ -67,10 +106,10 @@
                 </div>
             </header>
 
-            <main id="grid-container" class="grid grid-cols-4 gap-3 md:gap-6 w-full relative z-10">
-                </main>
+            <main id="grid-container" class="grid grid-cols-4 gap-3 md:gap-6 w-full relative z-10"></main>
         </div>
     </div>
+
     <div class="max-w-4xl mx-auto text-center py-12 relative z-20">
         <div id="action-buttons" class="flex flex-col items-center gap-4 mb-10">
             <button id="save-btn" onclick="saveAsPng()" class="inline-flex items-center gap-2 bg-[#d63031] text-white px-10 py-4 rounded-full font-black shadow-2xl hover:bg-[#b32626] transition-all text-base md:text-xl active:scale-95">
@@ -79,11 +118,8 @@
             </button>
             <p id="loading-msg" class="hidden text-[#d63031] font-bold animate-pulse text-sm">이미지를 생성하고 있습니다...</p>
         </div>
-
         <div class="opacity-20 flex flex-col items-center gap-2">
-            <p class="font-bold text-[10px] md:text-xs tracking-widest text-white uppercase">
-                copyright 2025. Penta_1031
-            </p>
+            <p class="font-bold text-[10px] md:text-xs tracking-widest text-white uppercase">copyright 2025. Penta_1031</p>
         </div>
     </div>
 
@@ -91,50 +127,39 @@
         const months = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, image: null }));
         const gridContainer = document.getElementById('grid-container');
         const backgroundDecor = document.getElementById('background-decor');
-
-        function createDecor() {
-            backgroundDecor.innerHTML = ''; 
-            for (let i = 0; i < 20; i++) {
-                const div = document.createElement('div');
-                div.className = 'absolute animate-pulse-custom opacity-10 text-white';
-                div.style.left = Math.random() * 100 + '%';
-                div.style.top = Math.random() * 100 + '%';
-                const size = Math.random() * 12 + 8;
-                div.innerHTML = `<i data-lucide="snowflake" style="width: ${size}px; height: ${size}px;"></i>`;
-                backgroundDecor.appendChild(div);
-            }
-            lucide.createIcons();
-        }
+        let cropper = null;
+        let currentMonthId = null;
 
         function renderGrid() {
             gridContainer.innerHTML = '';
             months.forEach((item, index) => {
                 const card = document.createElement('div');
                 const rotation = index % 2 === 0 ? 'rotate-pos' : 'rotate-neg';
-                card.className = `relative bg-white p-2 md:p-4 shadow-2xl rounded-xl border-b-[6px] border-slate-100 ${rotation}`;
+                card.className = `relative bg-white p-1.5 md:p-2.5 shadow-2xl rounded-xl border-b-[6px] border-slate-100 ${rotation}`;
                 
                 const tapeColor = index % 2 === 0 ? 'bg-[#d63031]' : 'bg-[#059669]';
                 const tapeRotate = index % 2 === 0 ? '-rotate-3' : 'rotate-2';
+                const monthStr = String(item.id).padStart(2, '0');
 
                 card.innerHTML = `
-                    <div class="tape absolute -top-1.5 md:-top-3 left-1/2 -translate-x-1/2 z-20 transform rounded-full shadow-md ${tapeColor} ${tapeRotate} border border-white/30"></div>
-                    <div class="month-label font-black mb-1.5 md:mb-3 flex justify-between items-center px-1">
-                        <span class="text-[#d63031] italic font-black">${String(item.id).padStart(2, '0')}</span>
-                        <i data-lucide="snowflake" class="text-slate-100 w-3 h-3 md:w-5 md:h-5"></i>
+                    <div class="tape absolute -top-1.5 md:-top-3 left-1/2 -translate-x-1/2 z-20 transform rounded-full shadow-md ${tapeColor} ${tapeRotate} border border-white/30">
+                        ${monthStr}
                     </div>
-                    <div class="relative aspect-square bg-slate-50 rounded-lg overflow-hidden cursor-pointer flex items-center justify-center border border-slate-100" onclick="triggerUpload(${item.id})">
+                    <div class="flex justify-end items-center px-1 mb-1">
+                        <i data-lucide="snowflake" class="text-slate-100 w-3 h-3 md:w-4 md:h-4"></i>
+                    </div>
+                    <div class="relative aspect-[4/5] bg-slate-50 rounded-lg overflow-hidden cursor-pointer flex items-center justify-center border border-slate-100" onclick="triggerUpload(${item.id})">
                         ${item.image ? `
-                            <img src="${item.image}" class="w-full h-full object-cover object-center">
-                            <button onclick="event.stopPropagation(); removeImage(${item.id})" class="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full backdrop-blur-sm">
-                                <i data-lucide="x" class="w-3 h-3 md:w-4 md:h-4"></i>
+                            <img src="${item.image}" class="w-full h-full object-cover">
+                            <button onclick="event.stopPropagation(); removeImage(${item.id})" class="no-export absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full backdrop-blur-sm z-30">
+                                <i data-lucide="x" class="w-2 h-2 md:w-3 md:h-3"></i>
                             </button>
                         ` : `
                             <div class="flex flex-col items-center text-slate-300">
-                                <i data-lucide="camera" class="w-5 h-5 md:w-10 md:h-10"></i>
-                                <span class="photo-text font-black mt-1">PHOTO</span>
+                                <i data-lucide="camera" class="w-5 h-5 md:w-8 md:h-8"></i>
                             </div>
                         `}
-                        <input type="file" id="input-${item.id}" class="hidden" accept="image/*" onchange="handleFile(${item.id}, event)">
+                        <input type="file" id="input-${item.id}" class="hidden" accept="image/*" onchange="openEditor(${item.id}, event)">
                     </div>
                 `;
                 gridContainer.appendChild(card);
@@ -144,16 +169,42 @@
 
         function triggerUpload(id) { document.getElementById(`input-${id}`).click(); }
 
-        function handleFile(id, event) {
+        function openEditor(id, event) {
             const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const month = months.find(m => m.id === id);
-                    if (month) { month.image = e.target.result; renderGrid(); }
-                };
-                reader.readAsDataURL(file);
+            if (!file) return;
+            currentMonthId = id;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const modal = document.getElementById('crop-modal');
+                const targetImg = document.getElementById('crop-target');
+                targetImg.src = e.target.result;
+                modal.style.display = 'flex';
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(targetImg, {
+                    aspectRatio: 4 / 5,
+                    viewMode: 1,
+                    guides: true,
+                    background: false,
+                    autoCropArea: 1,
+                });
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function closeModal() {
+            document.getElementById('crop-modal').style.display = 'none';
+            if (cropper) cropper.destroy();
+        }
+
+        function applyCrop() {
+            const canvas = cropper.getCroppedCanvas({ width: 800, height: 1000 });
+            const month = months.find(m => m.id === currentMonthId);
+            if (month) {
+                month.image = canvas.toDataURL('image/jpeg', 0.9);
+                renderGrid();
             }
+            closeModal();
         }
 
         function removeImage(id) {
@@ -170,31 +221,50 @@
             loadingMsg.classList.remove('hidden');
 
             try {
+                await document.fonts.ready;
+
                 const canvas = await html2canvas(captureArea, {
                     scale: 3, 
                     useCORS: true, 
                     backgroundColor: '#000000',
-                    width: captureArea.offsetWidth,
-                    height: captureArea.offsetHeight,
                     onclone: (clonedDoc) => {
-                        clonedDoc.getElementById('capture-area').style.margin = '0 auto';
+                        const noExportElements = clonedDoc.querySelectorAll('.no-export');
+                        noExportElements.forEach(el => el.style.display = 'none');
+                        
+                        // 클론된 요소에서 정렬 강제 재보정
+                        const tapes = clonedDoc.querySelectorAll('.tape');
+                        tapes.forEach(t => {
+                            t.style.display = 'flex';
+                            t.style.alignItems = 'center';
+                            t.style.justifyContent = 'center';
+                            t.style.lineHeight = '0';
+                            t.style.paddingTop = '0px'; 
+                        });
                     }
                 });
-
                 const link = document.createElement('a');
                 link.download = `2025_HQ_YEAR_END.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             } catch (err) {
                 console.error(err);
-                alert('이미지 생성 중 오류가 발생했습니다.');
             } finally {
                 saveBtn.style.display = 'inline-flex';
                 loadingMsg.classList.add('hidden');
             }
         }
 
-        window.onload = () => { createDecor(); renderGrid(); };
+        window.onload = () => {
+            for (let i = 0; i < 20; i++) {
+                const div = document.createElement('div');
+                div.className = 'absolute animate-pulse-custom opacity-10 text-white';
+                div.style.left = Math.random() * 100 + '%';
+                div.style.top = Math.random() * 100 + '%';
+                div.innerHTML = `<i data-lucide="snowflake" style="width: 12px; height: 12px;"></i>`;
+                backgroundDecor.appendChild(div);
+            }
+            renderGrid();
+        };
     </script>
 </body>
 </html>
