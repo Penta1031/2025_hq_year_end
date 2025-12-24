@@ -41,7 +41,7 @@
             position: relative;
         }
 
-        /* 테이프 정렬 방식 대폭 수정 (중앙 정렬 보정) */
+        /* 텍스트 쏠림 방지를 위해 line-height 수정 */
         .tape { 
             width: clamp(35px, 9vw, 65px); 
             height: clamp(12px, 3vw, 24px); 
@@ -52,7 +52,7 @@
             color: white;
             font-weight: 900;
             font-size: clamp(8px, 2vw, 12px);
-            line-height: 0; /* 텍스트 베이스라인 영향 제거 */
+            line-height: 1; /* 0에서 1로 수정하여 기준선 보정 */
             padding: 0;
             margin: 0;
             text-align: center;
@@ -143,7 +143,7 @@
 
                 card.innerHTML = `
                     <div class="tape absolute -top-1.5 md:-top-3 left-1/2 -translate-x-1/2 z-20 transform rounded-full shadow-md ${tapeColor} ${tapeRotate} border border-white/30">
-                        ${monthStr}
+                        <span class="tape-text">${monthStr}</span>
                     </div>
                     <div class="flex justify-end items-center px-1 mb-1">
                         <i data-lucide="snowflake" class="text-slate-100 w-3 h-3 md:w-4 md:h-4"></i>
@@ -231,14 +231,21 @@
                         const noExportElements = clonedDoc.querySelectorAll('.no-export');
                         noExportElements.forEach(el => el.style.display = 'none');
                         
-                        // 클론된 요소에서 정렬 강제 재보정
-                        const tapes = clonedDoc.querySelectorAll('.tape');
-                        tapes.forEach(t => {
-                            t.style.display = 'flex';
-                            t.style.alignItems = 'center';
-                            t.style.justifyContent = 'center';
-                            t.style.lineHeight = '0';
-                            t.style.paddingTop = '0px'; 
+                        // 캡처 시 텍스트 위치 강제 보정
+                        // const tapes = clonedDoc.querySelectorAll('.tape');
+                        // tapes.forEach(t => {
+                        //     t.style.display = 'flex';
+                        //     t.style.alignItems = 'center';
+                        //     t.style.justifyContent = 'center';
+                        //     t.style.lineHeight = '1'; 
+                        // });
+
+                        const tapeTexts = clonedDoc.querySelectorAll('.tape-text');
+                        tapeTexts.forEach(text => {
+                            text.style.display = 'inline-block';
+                            text.style.lineHeight = '1';
+                            // 텍스트만 위로 1~2px 올림 (빨간 배경은 고정된 채 텍스트만 이동)
+                            text.style.transform = 'translateY(-5px)'; 
                         });
                     }
                 });
