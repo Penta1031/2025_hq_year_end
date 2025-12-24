@@ -47,6 +47,7 @@
             pointer-events: none;
             animation: snowfall linear infinite;
             filter: blur(1px);
+            z-index: 20; /* 배너 및 헤더보다 위에 오도록 설정 */
         }
 
         /* 카드 회전 효과 */
@@ -56,9 +57,10 @@
         #capture-area {
             background-color: #000000;
             width: 100%;
-            max-width: 800px;
+            /* 6열 배치를 위해 너비를 늘림 */
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 60px 20px 60px 20px; 
+            padding: 0 20px 60px 20px; 
             display: flex;
             flex-direction: column;
             align-items: center; 
@@ -66,17 +68,56 @@
             overflow: hidden;
         }
 
-        /* 테이프 스타일 */
+        /* 상단 배너 영역 스타일 */
+        #top-banner {
+            width: 100%;
+            /* 배너 높이 설정 (필요시 수정) */
+            height: 400px; 
+            /* 요청하신 새 이미지 URL 적용 */
+            background-image: url(https://pbs.twimg.com/media/G88koEoakAAdDbz?format=jpg&name=large);
+            background-size: cover;
+            background-position: center 30%; /* 이미지 위치 조정 */
+            position: relative;
+            z-index: 5;
+        }
+
+        /* 페더(Feather) 효과를 위한 하단 그라데이션 마스크 */
+        #top-banner::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60%; /* 페더가 적용될 높이 비율 조절 */
+            /* 투명에서 검정색으로 자연스럽게 이어지는 그라데이션 */
+            background: linear-gradient(to bottom, transparent 0%, #000000 100%);
+            pointer-events: none;
+        }
+
+        /* 헤더 스타일 (배경 제거, 위치 조정) */
+        header {
+            width: 100%;
+            padding: 20px 20px;
+            position: relative;
+            z-index: 10;
+            background: none;
+            border: none;
+            /* 배너 위로 더 올라가게 배치하여 자연스럽게 겹치도록 설정 */
+            margin-top: -80px; 
+            margin-bottom: 20px;
+        }
+
+        /* 테이프 스타일 (6열에 맞춰 크기 약간 축소) */
         .tape { 
-            width: clamp(35px, 9vw, 65px); 
-            height: clamp(12px, 3vw, 24px); 
+            width: clamp(25px, 7vw, 50px); 
+            height: clamp(10px, 2.5vw, 20px); 
             opacity: 1 !important;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 900;
-            font-size: clamp(8px, 2vw, 12px);
+            font-size: clamp(8px, 1.5vw, 10px);
             line-height: 1; 
             z-index: 30;
             border: 1px solid rgba(255,255,255,0.3);
@@ -112,22 +153,24 @@
     </div>
 
     <div id="capture-area">
+        <div id="top-banner"></div>
+
         <div id="background-decor" class="absolute inset-0 pointer-events-none z-0"></div>
 
         <div class="relative z-10 w-full flex flex-col items-center">
-            <header class="flex flex-col items-center text-center mb-8 w-full">
+            <header class="flex flex-col items-center text-center">
                 <h1 class="text-4xl md:text-7xl font-bold tracking-tighter leading-tight italic flex flex-col items-center justify-center gap-1 uppercase">
-                    <span class="text-white">2025</span>
-                    <span class="text-[#d63031]">HQ YEAR END</span>
+                    <span class="text-white drop-shadow-lg">2025</span>
+                    <span class="text-[#d63031] drop-shadow-lg">HQ YEAR END</span>
                 </h1>
-                <div class="mt-10 mb-4 flex justify-center items-center gap-3 opacity-30">
+                <div class="mt-6 mb-2 flex justify-center items-center gap-3 opacity-60">
                     <div class="h-[1px] w-12 bg-white"></div>
                     <i data-lucide="heart" class="w-3 h-3 text-white"></i>
                     <div class="h-[1px] w-12 bg-white"></div>
                 </div>
             </header>
 
-            <main id="grid-container" class="grid grid-cols-4 gap-3 md:gap-6 w-full relative z-10"></main>
+            <main id="grid-container" class="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4 w-full relative z-10 px-4 md:px-0"></main>
         </div>
     </div>
 
@@ -144,6 +187,7 @@
     </div>
 
     <script>
+        // --- 중요: 이 스크립트 블록이 있어야 사진 넣는 기능이 작동합니다 ---
         const months = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, image: null }));
         const gridContainer = document.getElementById('grid-container');
         const backgroundDecor = document.getElementById('background-decor');
@@ -155,7 +199,6 @@
             months.forEach((item, index) => {
                 const card = document.createElement('div');
                 const rotation = index % 2 === 0 ? 'rotate-pos' : 'rotate-neg';
-                // 기존의 bg-white와 border를 제거하여 '박스' 느낌을 없앰
                 card.className = `relative aspect-[4/5] cursor-pointer group ${rotation}`;
                 
                 const tapeColor = index % 2 === 0 ? 'bg-[#d63031]' : 'bg-[#059669]';
