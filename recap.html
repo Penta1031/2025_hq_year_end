@@ -231,11 +231,12 @@
             await document.fonts.ready;
 
             html2canvas(canvas, {
-                scale: 4,
+                scale: 4, // 스크린샷에 설정하신 4배수 유지
                 useCORS: true,
                 backgroundColor: "#ffffff",
                 logging: false,
                 onclone: (clonedDoc) => {
+                    // 요청하신 대로 이 내부의 모든 보정 로직을 그대로 유지합니다
                     const clonedCanvas = clonedDoc.getElementById('recap-canvas');
                     clonedCanvas.style.gap = '0';
                     const children = clonedCanvas.children;
@@ -279,23 +280,24 @@
             reader.readAsDataURL(file); event.target.value = '';
         }
         function applyCrop() {
-            // 1. 고해상도 추출을 위해 출력될 이미지의 너비를 설정합니다 (기본 1200px)
-            const canvasOptions = {
+            // 1. 각 영역별 적정 해상도 설정 (index.html처럼 명시적 수치 부여)
+            let targetWidth = 1200;
+            let targetHeight = 1200 / currentAspectRatio;
+
+            const canvas = cropper.getCroppedCanvas({
+                width: targetWidth,
+                heightCca: targetHeight,
                 imageSmoothingEnabled: true,
                 imageSmoothingQuality: 'high',
-            };
-
-            // 너비 기준을 1200px로 잡고 비율에 따라 높이를 자동 계산하여 고화질 캔버스 생성
-            const canvas = cropper.getCroppedCanvas({
-                width: 1200, 
-                ...canvasOptions
             });
 
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.95); // 퀄리티 0.95로 저장
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
             const targetDiv = document.getElementById(currentTargetId);
             
-            targetDiv.style.backgroundImage = `url(${dataUrl})`; 
-            targetDiv.innerHTML = ''; 
+            // 2. 배경 이미지 대신 <img> 태그를 직접 삽입 (화질 저하 방지)
+            targetDiv.innerHTML = `<img src="${dataUrl}" class="w-full h-full object-cover">`;
+            targetDiv.style.backgroundImage = 'none'; // 기존 배경 제거
+            
             closeCropModal();
         }
         function closeCropModal() { document.getElementById('crop-modal').style.display = 'none'; if (cropper) cropper.destroy(); }
