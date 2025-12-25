@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 RECAP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Gowun Dodum', sans-serif;
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        #recap-canvas {
+            width: 360px;
+            background: white;
+            padding: 24px;
+            border-radius: 36px;
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 30px;
+        }
+
+        .recap-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8.5px;
+            font-weight: 800;
+            background-color: #fce7f3;
+            color: #db2777;
+            padding: 4px 12px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            line-height: 1.2;
+            white-space: nowrap !important;
+            word-break: keep-all;
+        }
+
+        .label-dark { background-color: #e2e8f0; color: #475569; }
+
+        .img-container {
+            background-size: cover;
+            background-position: center;
+            background-color: #f8fafc;
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .capture-mode .btn-ui-only,
+        .capture-mode .upload-placeholder { display: none !important; }
+
+        .text-fix {
+            display: inline-block !important;
+            line-height: 1.2 !important;
+            vertical-align: middle;
+        }
+
+        .btn-save {
+            background: #0f172a; color: white;
+            padding: 14px 40px; border-radius: 9999px; font-size: 14px;
+            font-weight: bold; display: flex; align-items: center; gap: 8px;
+            cursor: pointer;
+        }
+
+        /* 크롭 모달 레이아웃 수정 */
+        #crop-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0,0,0,0.95);
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #input-modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.8); z-index: 100;
+            align-items: center; justify-content: center; padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="recap-canvas">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-full -mr-16 -mt-16 z-0 opacity-60"></div>
+        
+        <div class="relative z-10 flex items-center gap-3 border-b border-slate-50 pb-4">
+            <div onclick="triggerUpload('profile-preview', 1)" class="relative w-14 h-14 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden cursor-pointer flex-shrink-0">
+                <div id="profile-preview" class="img-container">
+                    <i data-lucide="user" class="w-6 h-6 text-slate-300 upload-placeholder"></i>
+                </div>
+            </div>
+            <div class="flex flex-col flex-grow text-left clickable-text" onclick="openEditModal('nickname-display', '닉네임', '닉네임을 입력해주세요')">
+                <span class="text-[7px] font-black text-pink-400 tracking-widest uppercase mb-0.5 text-fix">2025 RECAP</span>
+                <div id="nickname-display" class="text-lg font-black text-slate-800 leading-none text-fix">닉네임을 입력해주세요</div>
+            </div>
+        </div>
+
+        <div class="relative z-10 text-left">
+            <div class="flex items-center justify-end mb-1 btn-ui-only">
+                <button onclick="toggleSection('encounter-wrapper', this)" class="text-[8px] font-bold text-slate-300 flex items-center gap-1">
+                    <i data-lucide="eye" class="w-2.5 h-2.5"></i> <span>숨기기</span>
+                </button>
+            </div>
+            <div id="encounter-wrapper" class="flex flex-col gap-1.5">
+                <div class="recap-label label-dark w-fit"><span class="text-fix">입덕계기</span></div>
+                <div class="flex flex-col gap-2 bg-slate-50/50 p-2 rounded-xl border border-slate-200 mb-1">
+                    <div onclick="triggerUpload('enc-preview', 21/9)" class="relative w-full aspect-[21/9] bg-white border border-slate-200 rounded-lg overflow-hidden cursor-pointer flex items-center justify-center">
+                        <div id="enc-preview" class="img-container">
+                            <i data-lucide="camera" class="w-4 h-4 text-slate-200 upload-placeholder"></i>
+                        </div>
+                    </div>
+                    <div id="encounter-display" class="text-[9px] italic text-slate-400 text-center font-medium clickable-text text-fix" onclick="openEditModal('encounter-display', '입덕계기', '텍스트를 입력해주세요')">텍스트를 입력해주세요</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-x-3 gap-y-4 relative z-10 text-left mb-1">
+            <div class="flex flex-col">
+                <div class="recap-label w-fit mb-1.5"><span class="text-fix">올해의 떡밥 (1)</span></div>
+                <div onclick="triggerUpload('bait1-preview', 16/9)" class="w-full aspect-[16/9] bg-slate-50 border border-dashed border-gray-200 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer">
+                    <div id="bait1-preview" class="img-container"><i data-lucide="camera" class="w-4 h-4 text-slate-200 upload-placeholder"></i></div>
+                </div>
+            </div>
+            <div class="flex flex-col">
+                <div class="recap-label w-fit mb-1.5"><span class="text-fix">올해의 떡밥 (2)</span></div>
+                <div onclick="triggerUpload('bait2-preview', 16/9)" class="w-full aspect-[16/9] bg-slate-50 border border-dashed border-gray-200 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer">
+                    <div id="bait2-preview" class="img-container"><i data-lucide="camera" class="w-4 h-4 text-slate-200 upload-placeholder"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative z-10 text-left">
+            <div class="flex items-center gap-1 mb-2 text-slate-400 font-black text-[8px] uppercase tracking-tighter">
+                <i data-lucide="quote" class="w-2.5 h-2.5 text-pink-400 fill-pink-400"></i> <span class="text-fix">올해의 명대사</span>
+            </div>
+            <div onclick="openEditModal('quote-display', '올해의 명대사', '명대사를 입력해주세요')" class="bg-white border border-slate-200 rounded-xl min-h-[54px] flex items-center justify-center p-3 relative shadow-sm overflow-hidden clickable-text">
+                <div id="quote-display" class="text-center text-[10px] font-bold text-slate-800 italic leading-relaxed z-10 w-full whitespace-pre-wrap text-fix">명대사를 입력해주세요</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-x-3 gap-y-4 relative z-10 text-left">
+            <div class="flex flex-col gap-4">
+                <div class="flex flex-col">
+                    <div class="recap-label w-fit mb-1.5"><span class="text-fix">올해의 투샷</span></div>
+                    <div onclick="triggerUpload('two-preview', 4/3)" class="w-full aspect-[4/3] bg-slate-50 border border-dashed border-gray-200 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer">
+                        <div id="two-preview" class="img-container"><i data-lucide="camera" class="w-4 h-4 text-slate-200 upload-placeholder"></i></div>
+                    </div>
+                </div>
+                <div class="flex flex-col">
+                    <div class="recap-label w-fit mb-1.5"><span class="text-fix">올해의 라이브</span></div>
+                    <div onclick="triggerUpload('live-preview', 4/3)" class="w-full aspect-[4/3] bg-slate-50 border border-dashed border-gray-200 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer">
+                        <div id="live-preview" class="img-container"><i data-lucide="camera" class="w-4 h-4 text-slate-200 upload-placeholder"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col">
+                <div class="recap-label w-fit mb-1.5"><span class="text-fix">올해의 프롬</span></div>
+                <div onclick="triggerUpload('fromm-preview', 0.8)" class="w-full h-full min-h-[100px] bg-slate-50 border border-dashed border-gray-200 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer relative">
+                    <div id="fromm-preview" class="img-container">
+                        <div class="flex flex-col items-center text-slate-200 scale-75 upload-placeholder">
+                            <i data-lucide="message-circle" class="w-6 h-6"></i>
+                            <span class="text-[9px] mt-1 font-mono uppercase font-bold text-fix">Fromm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative z-10 flex justify-between items-end mt-auto pt-3 border-t border-slate-50">
+            <div class="text-[7px] text-slate-300 font-mono tracking-widest text-fix">HQ_LOG_2025</div>
+            <div class="text-[9px] font-black text-slate-200 italic leading-tight text-fix">2025 RECAP</div>
+        </div>
+    </div>
+
+    <button onclick="captureImage()" class="btn-save shadow-lg"><i data-lucide="download" class="w-4 h-4"></i> 이미지로 저장하기</button>
+
+    <div class="btn-ui-only flex justify-center gap-3 mt-8 mb-10">
+        <a href="index.html" class="px-6 py-2 bg-slate-200 text-slate-500 rounded-full text-[11px] font-bold hover:bg-slate-300 transition-colors">월별 연말결산</a>
+        <a href="recap.html" class="px-6 py-2 bg-pink-500 text-white rounded-full text-[11px] font-bold shadow-md">2025 RECAP</a>
+    </div>
+
+    <input type="file" id="global-file-input" class="hidden" accept="image/*" onchange="loadToEditor(event)">
+
+    <div id="crop-modal">
+        <div class="flex-grow flex items-center justify-center w-full">
+            <div class="w-full max-w-[540px] aspect-square bg-zinc-800 overflow-hidden shadow-2xl">
+                <img id="crop-target" src="" style="max-width: 100%;">
+            </div>
+        </div>
+        <div class="flex gap-4 py-8">
+            <button onclick="closeCropModal()" class="px-6 py-2 bg-zinc-700 text-white rounded-full font-bold text-[10px] uppercase tracking-wider">취소</button>
+            <button onclick="applyCrop()" class="px-6 py-2 bg-pink-500 text-white rounded-full font-bold text-[10px] uppercase tracking-wider">적용하기</button>
+        </div>
+    </div>
+
+    <div id="input-modal">
+        <div class="bg-white w-full max-w-xs p-6 rounded-[32px] shadow-2xl flex flex-col gap-5">
+            <h3 id="modal-title" class="text-slate-900 font-black text-center text-base">내용 입력</h3>
+            <textarea id="modal-main-input" rows="4" class="w-full border-2 border-slate-50 rounded-2xl p-4 text-sm bg-slate-50 outline-none focus:border-pink-200"></textarea>
+            <div class="flex gap-2">
+                <button onclick="closeEditModal(false)" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl font-bold text-xs">취소</button>
+                <button onclick="closeEditModal(true)" class="flex-2 bg-pink-500 text-white py-3 px-8 rounded-xl font-bold text-xs">완료</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let cropper = null, currentTargetId = '', currentAspectRatio = 1, currentEditingId = '', currentDefaultText = '';
+
+        async function captureImage() {
+            const canvas = document.getElementById('recap-canvas');
+            canvas.classList.add('capture-mode');
+            await document.fonts.ready;
+
+            html2canvas(canvas, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false,
+                onclone: (clonedDoc) => {
+                    const clonedCanvas = clonedDoc.getElementById('recap-canvas');
+                    clonedCanvas.style.gap = '0';
+                    const children = clonedCanvas.children;
+                    for (let child of children) {
+                        child.style.marginBottom = '14px';
+                    }
+                    const texts = clonedDoc.querySelectorAll('.text-fix');
+                    texts.forEach(el => {
+                        el.style.transform = 'translateY(-5px)';
+                        el.style.display = 'inline-block';
+                    });
+                }
+            }).then(result => {
+                const link = document.createElement('a');
+                link.download = '2025_HQ_RECAP.png';
+                link.href = result.toDataURL('image/png');
+                link.click();
+                canvas.classList.remove('capture-mode');
+            });
+        }
+
+        function triggerUpload(id, ratio) { currentTargetId = id; currentAspectRatio = ratio; document.getElementById('global-file-input').click(); }
+        function loadToEditor(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const targetImg = document.getElementById('crop-target');
+                targetImg.src = e.target.result; document.getElementById('crop-modal').style.display = 'flex';
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(targetImg, { 
+                    aspectRatio: currentAspectRatio, 
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 1,
+                    center: true,
+                    highlight: false,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true
+                });
+            };
+            reader.readAsDataURL(file); event.target.value = '';
+        }
+        function applyCrop() {
+            const dataUrl = cropper.getCroppedCanvas().toDataURL('image/jpeg', 0.9);
+            const targetDiv = document.getElementById(currentTargetId);
+            targetDiv.style.backgroundImage = `url(${dataUrl})`; targetDiv.innerHTML = ''; closeCropModal();
+        }
+        function closeCropModal() { document.getElementById('crop-modal').style.display = 'none'; if (cropper) cropper.destroy(); }
+        
+        function openEditModal(targetId, title, defaultText) {
+            currentEditingId = targetId; currentDefaultText = defaultText;
+            const displayEl = document.getElementById(targetId);
+            const inputEl = document.getElementById('modal-main-input');
+            document.getElementById('modal-title').innerText = title;
+            inputEl.value = (displayEl.innerText === defaultText) ? "" : displayEl.innerText;
+            document.getElementById('input-modal').style.display = 'flex'; inputEl.focus();
+        }
+
+        function closeEditModal(isSave) {
+            if (isSave) {
+                const inputVal = document.getElementById('modal-main-input').value.trim();
+                const displayEl = document.getElementById(currentEditingId);
+                if (inputVal !== "") { displayEl.innerText = inputVal; displayEl.classList.replace('text-slate-400', 'text-slate-800'); }
+                else { displayEl.innerText = currentDefaultText; displayEl.classList.replace('text-slate-800', 'text-slate-400'); }
+            }
+            document.getElementById('input-modal').style.display = 'none';
+        }
+        
+        function toggleSection(id, btn) {
+            const el = document.getElementById(id); const isHidden = el.style.display === 'none';
+            el.style.display = isHidden ? 'flex' : 'none';
+            btn.querySelector('span').innerText = isHidden ? '숨기기' : '보이기';
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
