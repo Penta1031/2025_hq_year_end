@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -149,7 +150,8 @@
     <div id="capture-area">
         <div id="top-banner" class="relative overflow-hidden">
             <img src="https://pbs.twimg.com/media/G88koEoakAAdDbz?format=jpg&name=orig" 
-                class="absolute inset-0 w-full h-full object-cover object-[center_30%]">
+                crossorigin="anonymous"
+                class="banner-img absolute w-full h-full object-cover">
             <div class="banner-overlay"></div>
         </div>
         
@@ -233,7 +235,7 @@
                 const canvas = await html2canvas(captureArea, {
                     useCORS: true,
                     backgroundColor: "#000000",
-                    scale: 3, 
+                    scale: 4, 
                     logging: false
                 });
 
