@@ -62,7 +62,7 @@
         #top-banner {
             width: 100%;
             height: 220px;
-            background-image: url(https://pbs.twimg.com/media/G88koEoakAAdDbz?format=jpg&name=large);
+            background-image: url(https://pbs.twimg.com/media/G88koEoakAAdDbz?format=jpg&name=orig);
             background-size: cover;
             background-position: center 30%; 
             position: relative;
@@ -147,7 +147,9 @@
     </div>
 
     <div id="capture-area">
-        <div id="top-banner">
+        <div id="top-banner" class="relative overflow-hidden">
+            <img src="https://pbs.twimg.com/media/G88koEoakAAdDbz?format=jpg&name=orig" 
+                class="absolute inset-0 w-full h-full object-cover object-[center_30%]">
             <div class="banner-overlay"></div>
         </div>
         
