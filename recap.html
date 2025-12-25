@@ -231,7 +231,7 @@
             await document.fonts.ready;
 
             html2canvas(canvas, {
-                scale: 3,
+                scale: 4,
                 useCORS: true,
                 backgroundColor: "#ffffff",
                 logging: false,
@@ -279,9 +279,24 @@
             reader.readAsDataURL(file); event.target.value = '';
         }
         function applyCrop() {
-            const dataUrl = cropper.getCroppedCanvas().toDataURL('image/jpeg', 0.9);
+            // 1. 고해상도 추출을 위해 출력될 이미지의 너비를 설정합니다 (기본 1200px)
+            const canvasOptions = {
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high',
+            };
+
+            // 너비 기준을 1200px로 잡고 비율에 따라 높이를 자동 계산하여 고화질 캔버스 생성
+            const canvas = cropper.getCroppedCanvas({
+                width: 1200, 
+                ...canvasOptions
+            });
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95); // 퀄리티 0.95로 저장
             const targetDiv = document.getElementById(currentTargetId);
-            targetDiv.style.backgroundImage = `url(${dataUrl})`; targetDiv.innerHTML = ''; closeCropModal();
+            
+            targetDiv.style.backgroundImage = `url(${dataUrl})`; 
+            targetDiv.innerHTML = ''; 
+            closeCropModal();
         }
         function closeCropModal() { document.getElementById('crop-modal').style.display = 'none'; if (cropper) cropper.destroy(); }
         
